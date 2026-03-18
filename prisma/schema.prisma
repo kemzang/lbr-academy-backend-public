@@ -1,0 +1,500 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== ENUMS ====================
+
+enum Role {
+  APPRENANT
+  CREATEUR
+  ENTREPRENEUR
+  HYBRIDE
+  COACH
+  ADMIN
+}
+
+enum ContentType {
+  BOOK
+  ARTICLE
+  FORMATION
+  SERIES
+  AUDIO
+  VIDEO
+}
+
+enum ContentStatus {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  ARCHIVED
+}
+
+enum PurchaseStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentType {
+  PURCHASE
+  SUBSCRIPTION
+  CERTIFICATION
+  WITHDRAWAL
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum SubscriptionStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum PlanType {
+  FREE
+  STANDARD
+  PREMIUM
+  CREATOR
+  COACH
+}
+
+enum RequestStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum NotificationType {
+  NEW_CONTENT
+  NEW_FOLLOWER
+  CONTENT_APPROVED
+  CONTENT_REJECTED
+  ROLE_UPGRADE_APPROVED
+  ROLE_UPGRADE_REJECTED
+  NEW_COMMENT
+  NEW_PURCHASE
+  SUBSCRIPTION_EXPIRING
+  SUBSCRIPTION_EXPIRED
+  PAYMENT_RECEIVED
+  CERTIFICATION_ISSUED
+  SYSTEM
+}
+
+enum LikeType {
+  LIKE
+  LOVE
+  INSIGHTFUL
+  HELPFUL
+}
+
+enum LessonType {
+  TEXT
+  VIDEO
+  AUDIO
+  DOCUMENT
+  QUIZ
+  MIXED
+}
+
+// ==================== MODELS ====================
+
+model User {
+  id                     Int       @id @default(autoincrement())
+  username               String    @unique @db.VarChar(50)
+  email                  String    @unique
+  password               String
+  phone                  String?   @db.VarChar(20)
+  fullName               String?   @db.VarChar(100)
+  bio                    String?
+  profilePicture         String?   @db.VarChar(500)
+  role                   Role      @default(APPRENANT)
+  enabled                Boolean   @default(true)
+  emailVerified          Boolean   @default(false)
+  profileComplete        Boolean   @default(false)
+  isCertified            Boolean   @default(false)
+  certificationBadge     String?   @db.VarChar(500)
+  totalViews             BigInt    @default(0)
+  totalSales             BigInt    @default(0)
+  totalEarnings          Float     @default(0)
+  resetPasswordToken     String?
+  resetPasswordExpiry    DateTime?
+  emailVerificationToken String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  lastLoginAt            DateTime?
+
+  contents       Content[]
+  purchases      Purchase[]
+  favorites      Favorite[]
+  following      Follow[]         @relation("follower")
+  followers      Follow[]         @relation("followed")
+  comments       Comment[]
+  subscriptions  UserSubscription[]
+  notifications  Notification[]
+  likes          Like[]
+  payments       Payment[]
+  roleUpgradeRequests    RoleUpgradeRequest[] @relation("userRequests")
+  reviewedUpgradeRequests RoleUpgradeRequest[] @relation("reviewedBy")
+  settings       UserSettings?
+
+  @@map("users")
+}
+
+model Category {
+  id           Int        @id @default(autoincrement())
+  name         String     @unique
+  description  String?    @db.VarChar(500)
+  slug         String?    @db.VarChar(100)
+  iconUrl      String?    @db.VarChar(500)
+  active       Boolean    @default(true)
+  displayOrder Int        @default(0)
+  parentId     Int?
+  parent       Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  subcategories Category[] @relation("CategoryTree")
+  contents     Content[]
+  createdAt    DateTime   @default(now())
+
+  @@map("categories")
+}
+
+model Content {
+  id              Int           @id @default(autoincrement())
+  title           String
+  description     String?
+  summary         String?
+  coverImage      String?       @db.VarChar(500)
+  fileUrl         String?       @db.VarChar(500)
+  slug            String?       @db.VarChar(100)
+  type            ContentType
+  status          ContentStatus @default(DRAFT)
+  isFree          Boolean       @default(true)
+  price           Float         @default(0)
+  currency        String        @default("XAF") @db.VarChar(10)
+  isFeatured      Boolean       @default(false)
+  isCertified     Boolean       @default(false)
+  viewCount       BigInt        @default(0)
+  downloadCount   BigInt        @default(0)
+  purchaseCount   BigInt        @default(0)
+  rating          Float         @default(0)
+  ratingCount     Int           @default(0)
+  language        String?       @db.VarChar(50)
+  pageCount       Int?
+  duration        Int?
+  tags            String?       @db.VarChar(500)
+  freePreview     String?
+  rejectionReason String?
+  displayOrder    Int?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  publishedAt     DateTime?
+
+  authorId        Int
+  author          User          @relation(fields: [authorId], references: [id])
+  categoryId      Int?
+  category        Category?     @relation(fields: [categoryId], references: [id])
+  seriesId        Int?
+  parentSeries    Content?      @relation("ContentSeries", fields: [seriesId], references: [id])
+  seriesContents  Content[]     @relation("ContentSeries")
+
+  chapters        Chapter[]
+  modules         Module[]
+  comments        Comment[]
+  favorites       Favorite[]
+  purchases       Purchase[]
+  likes           Like[]
+
+  @@map("contents")
+}
+
+model Chapter {
+  id            Int      @id @default(autoincrement())
+  title         String
+  textContent   String?
+  fileUrl       String?  @db.VarChar(500)
+  orderIndex    Int      @default(0)
+  isFreePreview Boolean  @default(false)
+  duration      Int?
+  contentId     Int
+  parentContent Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("chapters")
+}
+
+model Module {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  orderIndex  Int      @default(0)
+  duration    Int?
+  formationId Int
+  formation   Content  @relation(fields: [formationId], references: [id], onDelete: Cascade)
+  lessons     Lesson[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("modules")
+}
+
+model Lesson {
+  id            Int        @id @default(autoincrement())
+  title         String
+  description   String?
+  content       String?
+  videoUrl      String?    @db.VarChar(500)
+  audioUrl      String?    @db.VarChar(500)
+  documentUrl   String?    @db.VarChar(500)
+  lessonType    LessonType @default(TEXT)
+  orderIndex    Int        @default(0)
+  duration      Int?
+  isFreePreview Boolean    @default(false)
+  moduleId      Int
+  module        Module     @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@map("lessons")
+}
+
+model Comment {
+  id         Int       @id @default(autoincrement())
+  text       String
+  likesCount Int       @default(0)
+  isEdited   Boolean   @default(false)
+  isHidden   Boolean   @default(false)
+  userId     Int
+  user       User      @relation(fields: [userId], references: [id])
+  contentId  Int
+  content    Content   @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  parentId   Int?
+  parent     Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies    Comment[] @relation("CommentReplies")
+  likes      Like[]
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@map("comments")
+}
+
+model Like {
+  id        Int      @id @default(autoincrement())
+  type      LikeType @default(LIKE)
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  contentId Int?
+  content   Content? @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  commentId Int?
+  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, contentId])
+  @@unique([userId, commentId])
+  @@map("likes")
+}
+
+model Favorite {
+  id         Int      @id @default(autoincrement())
+  collection String?  @db.VarChar(100)
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id])
+  contentId  Int
+  content    Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, contentId])
+  @@map("favorites")
+}
+
+model Follow {
+  id                   Int      @id @default(autoincrement())
+  notificationsEnabled Boolean  @default(true)
+  followerId           Int
+  follower             User     @relation("follower", fields: [followerId], references: [id])
+  followedId           Int
+  followed             User     @relation("followed", fields: [followedId], references: [id])
+  createdAt            DateTime @default(now())
+
+  @@unique([followerId, followedId])
+  @@map("follows")
+}
+
+model Notification {
+  id         Int              @id @default(autoincrement())
+  title      String
+  message    String
+  type       NotificationType
+  isRead     Boolean          @default(false)
+  targetType String?          @db.VarChar(50)
+  targetId   Int?
+  actionUrl  String?          @db.VarChar(500)
+  userId     Int
+  user       User             @relation(fields: [userId], references: [id])
+  createdAt  DateTime         @default(now())
+  readAt     DateTime?
+
+  @@map("notifications")
+}
+
+model Purchase {
+  id                 Int            @id @default(autoincrement())
+  amount             Float
+  currency           String         @default("XAF") @db.VarChar(10)
+  status             PurchaseStatus @default(PENDING)
+  paymentReference   String?        @db.VarChar(100)
+  paymentMethod      String?        @db.VarChar(50)
+  platformCommission Float?
+  creatorEarnings    Float?
+  userId             Int
+  user               User           @relation(fields: [userId], references: [id])
+  contentId          Int
+  content            Content        @relation(fields: [contentId], references: [id])
+  createdAt          DateTime       @default(now())
+  completedAt        DateTime?
+
+  @@unique([userId, contentId])
+  @@map("purchases")
+}
+
+model Payment {
+  id                Int           @id @default(autoincrement())
+  amount            Float
+  currency          String        @default("XAF") @db.VarChar(10)
+  type              PaymentType
+  status            PaymentStatus @default(PENDING)
+  paymentMethod     String?       @db.VarChar(50)
+  externalReference String?       @db.VarChar(100)
+  internalReference String?       @db.VarChar(100)
+  metadata          String?
+  failureReason     String?
+  purchaseId        Int?
+  subscriptionId    Int?
+  userId            Int
+  user              User          @relation(fields: [userId], references: [id])
+  createdAt         DateTime      @default(now())
+  completedAt       DateTime?
+
+  @@map("payments")
+}
+
+model SubscriptionPlan {
+  id                   Int                @id @default(autoincrement())
+  name                 String             @unique
+  description          String?
+  type                 PlanType
+  price                Float
+  currency             String             @default("XAF") @db.VarChar(10)
+  durationDays         Int
+  active               Boolean            @default(true)
+  accessPremiumContent Boolean            @default(false)
+  canPublishContent    Boolean            @default(false)
+  canCreateFormations  Boolean            @default(false)
+  prioritySupport      Boolean            @default(false)
+  maxContentDownloads  Int                @default(10)
+  subscriptions        UserSubscription[]
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@map("subscription_plans")
+}
+
+model UserSubscription {
+  id               Int                @id @default(autoincrement())
+  status           SubscriptionStatus @default(PENDING)
+  startDate        DateTime
+  endDate          DateTime
+  autoRenew        Boolean            @default(false)
+  paymentReference String?            @db.VarChar(100)
+  userId           Int
+  user             User               @relation(fields: [userId], references: [id])
+  planId           Int
+  plan             SubscriptionPlan   @relation(fields: [planId], references: [id])
+  createdAt        DateTime           @default(now())
+  cancelledAt      DateTime?
+
+  @@map("user_subscriptions")
+}
+
+model RoleUpgradeRequest {
+  id              Int           @id @default(autoincrement())
+  currentRole     Role
+  requestedRole   Role
+  status          RequestStatus @default(PENDING)
+  motivation      String?
+  bio             String?
+  portfolioUrl    String?       @db.VarChar(500)
+  linkedinUrl     String?       @db.VarChar(500)
+  specialization  String?       @db.VarChar(100)
+  adminNotes      String?
+  rejectionReason String?
+  userId          Int
+  user            User          @relation("userRequests", fields: [userId], references: [id])
+  reviewedById    Int?
+  reviewedBy      User?         @relation("reviewedBy", fields: [reviewedById], references: [id])
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  reviewedAt      DateTime?
+
+  @@map("role_upgrade_requests")
+}
+
+model UserSettings {
+  id              Int      @id @default(autoincrement())
+  emailNewContent Boolean  @default(true)
+  emailNewFollower Boolean @default(true)
+  emailComments   Boolean  @default(false)
+  emailNewsletter Boolean  @default(true)
+  pushEnabled     Boolean  @default(false)
+  profilePublic   Boolean  @default(true)
+  showEmail       Boolean  @default(false)
+  showActivity    Boolean  @default(true)
+  userId          Int      @unique
+  user            User     @relation(fields: [userId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("user_settings")
+}
+
+model AppSettings {
+  id                Int      @id @default(autoincrement())
+  siteName          String   @default("La Bibliothèque des Rois") @db.VarChar(200)
+  siteDescription   String   @default("Plateforme de partage de connaissances")
+  siteUrl           String   @default("https://lbr-academy.com") @db.VarChar(500)
+  supportEmail      String   @default("support@lbr-academy.com") @db.VarChar(200)
+  defaultLanguage   String   @default("fr") @db.VarChar(10)
+  requireApproval   Boolean  @default(true)
+  allowComments     Boolean  @default(true)
+  allowRatings      Boolean  @default(true)
+  maxFileSize       Int      @default(50)
+  allowedFileTypes  String   @default("pdf,epub,mp3,mp4") @db.VarChar(500)
+  emailNewUser      Boolean  @default(true)
+  emailNewContent   Boolean  @default(true)
+  emailNewPurchase  Boolean  @default(true)
+  emailNewComment   Boolean  @default(false)
+  currency          String   @default("XAF") @db.VarChar(10)
+  minPrice          Int      @default(500)
+  platformFee       Float    @default(10.0)
+  paymentMethods    String   @default("momo,om,card") @db.VarChar(200)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("app_settings")
+}
