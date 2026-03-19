@@ -3,11 +3,11 @@ import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 import { NextRequest } from "next/server";
 
-const JWT_SECRET = process.env.JWT_SECRET!;
+const JWT_SECRET: jwt.Secret = process.env.JWT_SECRET || "fallback-secret";
 const JWT_EXPIRATION_MS = parseInt(process.env.JWT_EXPIRATION || "86400000");
 const JWT_REFRESH_EXPIRATION_MS = parseInt(process.env.JWT_REFRESH_EXPIRATION || "604800000");
-const JWT_EXPIRATION = `${JWT_EXPIRATION_MS / 1000}s`;
-const JWT_REFRESH_EXPIRATION = `${JWT_REFRESH_EXPIRATION_MS / 1000}s`;
+const JWT_EXPIRATION = Math.floor(JWT_EXPIRATION_MS / 1000);
+const JWT_REFRESH_EXPIRATION = Math.floor(JWT_REFRESH_EXPIRATION_MS / 1000);
 
 export function hashPassword(password: string) {
   return bcrypt.hashSync(password, 10);
