@@ -22,3 +22,11 @@ export function handleError(e: unknown) {
   }
   return error("Erreur interne du serveur", 500);
 }
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function excludeSensitiveFields(user: any) {
+  if (!user) return user;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { password, resetPasswordToken, resetPasswordExpiry, emailVerificationToken, ...safe } = user;
+  return safe;
+}

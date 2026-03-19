@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { success, handleError } from "@/lib/api-response";
+import { sendContentRejectedEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ contentId: string }> }) {
   try {
@@ -12,8 +13,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ con
     const content = await prisma.content.update({
       where: { id: parseInt(contentId) },
       data: { status: "REJECTED", rejectionReason: body.reason },
+      include: { author: { select: { id: true, username: true, email: true } } },
     });
 
+    // Notification in-app
     await prisma.notification.create({
       data: {
         userId: content.authorId,
@@ -24,6 +27,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ con
         targetId: content.id,
       },
     });
+
+    // Email
+    sendContentRejectedEmail(content.author.email, content.title, body.reason).catch(console.error);
 
     return success(content, "Contenu rejeté");
   } catch (e) {

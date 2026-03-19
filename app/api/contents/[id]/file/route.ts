@@ -2,8 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { success, error, handleError } from "@/lib/api-response";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
+import { uploadFile } from "@/lib/cloudinary";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -19,16 +18,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const file = formData.get("file") as File | null;
     if (!file) return error("Fichier requis", 400);
 
-    const bytes = await file.arrayBuffer();
-    const ext = path.extname(file.name);
-    const filename = `content_${contentId}_${Date.now()}${ext}`;
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "files");
-    await mkdir(uploadDir, { recursive: true });
-    await writeFile(path.join(uploadDir, filename), Buffer.from(bytes));
+    const { url } = await uploadFile(file, "contents");
 
     const updated = await prisma.content.update({
       where: { id: contentId },
-      data: { fileUrl: `/uploads/files/${filename}` },
+      data: { fileUrl: url },
+      include: {
+        author: { select: { id: true, username: true, fullName: true, profilePicture: true } },
+        category: { select: { id: true, name: true, slug: true } },
+      },
     });
 
     return success(updated, "Fichier uploadé");

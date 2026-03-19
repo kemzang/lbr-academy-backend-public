@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
-import { success, handleError } from "@/lib/api-response";
+import { success, handleError, excludeSensitiveFields } from "@/lib/api-response";
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
         _count: { select: { contents: true, followers: true, following: true } },
       },
     });
-    const { password, resetPasswordToken, emailVerificationToken, ...safe } = profile!;
+    const safe = excludeSensitiveFields(profile);
     return success({ ...safe, followersCount: safe._count.followers, followingCount: safe._count.following, contentsCount: safe._count.contents });
   } catch (e) {
     return handleError(e);
@@ -29,8 +29,7 @@ export async function PUT(req: NextRequest) {
       where: { id: user.id },
       data: { fullName, bio, phone, profileComplete: true },
     });
-    const { password, resetPasswordToken, emailVerificationToken, ...safe } = updated;
-    return success(safe, "Profil mis à jour");
+    return success(excludeSensitiveFields(updated), "Profil mis à jour");
   } catch (e) {
     return handleError(e);
   }
