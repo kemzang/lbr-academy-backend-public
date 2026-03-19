@@ -1,13 +1,17 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-const from = process.env.FROM_EMAIL || "onboarding@resend.dev";
-const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+let _resend: Resend;
+function getResend() {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY);
+  return _resend;
+}
+function getFrom() { return process.env.FROM_EMAIL || "onboarding@resend.dev"; }
+function getFrontendUrl() { return process.env.FRONTEND_URL || "http://localhost:3001"; }
 
 export async function sendPasswordResetEmail(email: string, token: string) {
-  const resetLink = `${frontendUrl}/reset-password?token=${token}`;
-  await resend.emails.send({
-    from,
+  const resetLink = `${getFrontendUrl()}/reset-password?token=${token}`;
+  await getResend().emails.send({
+    from: getFrom(),
     to: email,
     subject: "Réinitialisation de votre mot de passe - LBR Academy",
     html: `
@@ -24,9 +28,9 @@ export async function sendPasswordResetEmail(email: string, token: string) {
 }
 
 export async function sendVerificationEmail(email: string, token: string) {
-  const verifyLink = `${frontendUrl}/verify-email?token=${token}`;
-  await resend.emails.send({
-    from,
+  const verifyLink = `${getFrontendUrl()}/verify-email?token=${token}`;
+  await getResend().emails.send({
+    from: getFrom(),
     to: email,
     subject: "Vérifiez votre email - LBR Academy",
     html: `
@@ -40,9 +44,10 @@ export async function sendVerificationEmail(email: string, token: string) {
   });
 }
 
+
 export async function sendContentApprovedEmail(email: string, contentTitle: string) {
-  await resend.emails.send({
-    from,
+  await getResend().emails.send({
+    from: getFrom(),
     to: email,
     subject: "Contenu approuvé - LBR Academy",
     html: `
@@ -53,8 +58,8 @@ export async function sendContentApprovedEmail(email: string, contentTitle: stri
 }
 
 export async function sendContentRejectedEmail(email: string, contentTitle: string, reason?: string) {
-  await resend.emails.send({
-    from,
+  await getResend().emails.send({
+    from: getFrom(),
     to: email,
     subject: "Contenu rejeté - LBR Academy",
     html: `
@@ -67,15 +72,15 @@ export async function sendContentRejectedEmail(email: string, contentTitle: stri
 }
 
 export async function sendWelcomeEmail(email: string, username: string) {
-  await resend.emails.send({
-    from,
+  await getResend().emails.send({
+    from: getFrom(),
     to: email,
     subject: "Bienvenue sur LBR Academy !",
     html: `
       <h2>Bienvenue ${username} !</h2>
       <p>Votre compte a été créé avec succès sur La Bibliothèque des Rois.</p>
       <p>Explorez nos contenus et commencez votre parcours d'apprentissage.</p>
-      <a href="${frontendUrl}" style="display:inline-block;padding:12px 24px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">
+      <a href="${getFrontendUrl()}" style="display:inline-block;padding:12px 24px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">
         Accéder à la plateforme
       </a>
     `,
