@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth, getCurrentUser } from "@/lib/auth";
 import { success, handleError } from "@/lib/api-response";
 import { generateSlug } from "@/lib/slug";
+import { uploadFile } from "@/lib/cloudinary";
 import { Prisma } from "@prisma/client";
 
 const authorSelect = { id: true, username: true, fullName: true, profilePicture: true };
@@ -52,24 +53,79 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const user = await requireAuth(req);
-    const body = await req.json();
+
+    const contentType = req.headers.get("content-type") || "";
+    let title: string, description: string | undefined, summary: string | undefined;
+    let type: string, isFree: boolean, price: number, currency: string;
+    let language: string | undefined, pageCount: number | undefined, duration: number | undefined;
+    let tags: string | undefined, categoryId: number | undefined;
+    let coverFile: File | null = null;
+    let contentFile: File | null = null;
+
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await req.formData();
+      title = formData.get("title") as string;
+      description = formData.get("description") as string | undefined;
+      summary = formData.get("summary") as string | undefined;
+      type = formData.get("type") as string;
+      isFree = formData.get("isFree") === "true" || formData.get("isFree") === "1";
+      price = parseFloat(formData.get("price") as string) || 0;
+      currency = (formData.get("currency") as string) || "XAF";
+      language = formData.get("language") as string | undefined;
+      pageCount = formData.get("pageCount") ? parseInt(formData.get("pageCount") as string) : undefined;
+      duration = formData.get("duration") ? parseInt(formData.get("duration") as string) : undefined;
+      const rawTags = formData.get("tags") as string | undefined;
+      tags = rawTags || undefined;
+      categoryId = formData.get("categoryId") ? parseInt(formData.get("categoryId") as string) : undefined;
+      coverFile = formData.get("coverImage") as File | null;
+      contentFile = formData.get("file") as File | null;
+    } else {
+      const body = await req.json();
+      title = body.title;
+      description = body.description;
+      summary = body.summary;
+      type = body.type;
+      isFree = body.isFree ?? true;
+      price = body.price ?? 0;
+      currency = body.currency || "XAF";
+      language = body.language;
+      pageCount = body.pageCount;
+      duration = body.duration;
+      tags = Array.isArray(body.tags) ? body.tags.join(",") : body.tags;
+      categoryId = body.categoryId;
+    }
+
+    // Upload fichiers vers Cloudinary
+    let coverImageUrl: string | undefined;
+    let fileUrl: string | undefined;
+
+    if (coverFile && coverFile.size > 0) {
+      const result = await uploadFile(coverFile, "covers");
+      coverImageUrl = result.url;
+    }
+    if (contentFile && contentFile.size > 0) {
+      const result = await uploadFile(contentFile, "contents");
+      fileUrl = result.url;
+    }
 
     const content = await prisma.content.create({
       data: {
-        title: body.title,
-        description: body.description,
-        summary: body.summary,
-        type: body.type,
-        isFree: body.isFree ?? true,
-        price: body.price ?? 0,
-        currency: body.currency || "XAF",
-        language: body.language,
-        pageCount: body.pageCount,
-        duration: body.duration,
-        tags: Array.isArray(body.tags) ? body.tags.join(",") : body.tags,
-        slug: generateSlug(body.title),
+        title,
+        description,
+        summary,
+        type: type as any,
+        isFree,
+        price,
+        currency,
+        language,
+        pageCount,
+        duration,
+        tags,
+        slug: generateSlug(title),
         authorId: user.id,
-        categoryId: body.categoryId,
+        categoryId,
+        coverImage: coverImageUrl,
+        fileUrl,
       },
       include: { author: { select: authorSelect }, category: { select: categorySelect } },
     });
