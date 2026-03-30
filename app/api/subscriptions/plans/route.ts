@@ -21,9 +21,6 @@ export async function POST(req: NextRequest) {
       data: {
         name: body.name, description: body.description, type: body.type,
         price: body.price, currency: body.currency || "XAF", durationDays: body.durationDays || body.duration || 30,
-        accessPremiumContent: body.accessPremiumContent, canPublishContent: body.canPublishContent,
-        canCreateFormations: body.canCreateFormations, prioritySupport: body.prioritySupport,
-        maxContentDownloads: body.maxContentDownloads,
       },
     });
 

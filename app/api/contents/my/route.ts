@@ -1,12 +1,12 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireRole } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth";
 import { success, handleError } from "@/lib/api-response";
 import { Prisma } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
   try {
-    const user = await requireRole(req, ["CREATEUR", "ENTREPRENEUR", "HYBRIDE", "COACH", "ADMIN"]);
+    const user = await requireAuth(req);
     const sp = req.nextUrl.searchParams;
     const status = sp.get("status");
     const page = parseInt(sp.get("page") || "0");

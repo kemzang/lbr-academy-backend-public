@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireRole, getCurrentUser } from "@/lib/auth";
+import { requireAuth, getCurrentUser } from "@/lib/auth";
 import { success, handleError } from "@/lib/api-response";
 import { generateSlug } from "@/lib/slug";
 import { Prisma } from "@prisma/client";
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await requireRole(req, ["CREATEUR", "ENTREPRENEUR", "HYBRIDE", "COACH", "ADMIN"]);
+    const user = await requireAuth(req);
     const body = await req.json();
 
     const content = await prisma.content.create({

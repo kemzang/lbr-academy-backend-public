@@ -67,10 +67,7 @@ enum SubscriptionStatus {
 
 enum PlanType {
   FREE
-  STANDARD
   PREMIUM
-  CREATOR
-  COACH
 }
 
 enum RequestStatus {
@@ -403,11 +400,6 @@ model SubscriptionPlan {
   currency             String             @default("XAF") @db.VarChar(10)
   durationDays         Int
   active               Boolean            @default(true)
-  accessPremiumContent Boolean            @default(false)
-  canPublishContent    Boolean            @default(false)
-  canCreateFormations  Boolean            @default(false)
-  prioritySupport      Boolean            @default(false)
-  maxContentDownloads  Int                @default(10)
   subscriptions        UserSubscription[]
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt

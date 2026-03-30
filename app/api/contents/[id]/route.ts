@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser, requireRole } from "@/lib/auth";
+import { getCurrentUser, requireAuth } from "@/lib/auth";
 import { success, error, handleError } from "@/lib/api-response";
 
 const includes = {
@@ -30,7 +30,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = await requireRole(req, ["CREATEUR", "ENTREPRENEUR", "HYBRIDE", "COACH", "ADMIN"]);
+    const user = await requireAuth(req);
     const { id } = await params;
     const contentId = parseInt(id);
     const body = await req.json();
@@ -65,7 +65,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = await requireRole(req, ["CREATEUR", "ENTREPRENEUR", "HYBRIDE", "COACH", "ADMIN"]);
+    const user = await requireAuth(req);
     const { id } = await params;
     const contentId = parseInt(id);
 
