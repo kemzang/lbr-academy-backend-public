@@ -18,6 +18,18 @@ export function handleError(e: unknown) {
     if (e.message.includes("Unique constraint")) return error("Cette ressource existe déjà", 409);
     if (e.message.includes("not found") || e.message.includes("introuvable"))
       return error(e.message, 404);
+    // Erreurs Prisma / DB → 500 pas 400
+    if (
+      e.message.includes("prisma") ||
+      e.message.includes("database") ||
+      e.message.includes("connect") ||
+      e.message.includes("column") ||
+      e.message.includes("table") ||
+      e.constructor.name.startsWith("Prisma")
+    ) {
+      console.error("[DB Error]", e.message);
+      return error("Erreur serveur interne", 500);
+    }
     return error(e.message, 400);
   }
   return error("Erreur interne du serveur", 500);
