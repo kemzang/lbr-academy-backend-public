@@ -99,6 +99,8 @@ export async function POST(req: NextRequest) {
     let coverImageUrl: string | undefined;
     let fileUrl: string | undefined;
 
+    console.log("[POST /api/contents] coverFile:", coverFile?.name, coverFile?.size, "contentFile:", contentFile?.name, contentFile?.size);
+
     if (coverFile && coverFile.size > 0) {
       const result = await uploadFile(coverFile, "covers");
       coverImageUrl = result.url;
